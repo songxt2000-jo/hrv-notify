@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
-BARK_URL = os.environ.get("BARK_URL")  # 格式: https://api.day.app/你的key
+BARK_URL = os.environ.get("BARK_URL")
 
 @app.route("/notify", methods=["POST"])
 def notify():
@@ -15,7 +15,6 @@ def notify():
     if not hrv:
         return jsonify({"error": "missing hrv"}), 400
 
-    # 调DeepSeek
     ds_response = requests.post(
         "https://api.deepseek.com/v1/chat/completions",
         headers={
@@ -26,16 +25,22 @@ def notify():
             "model": "deepseek-chat",
             "messages": [{
                 "role": "user",
-                "content": f"我的HRV值是{hrv}ms，请用一句温柔的中文告诉我现在的身体状态，像恋人一样，不超过30字。"
+                "content": f"我的HRV值是{hrv}ms，请用一句温柔的中文告诉我现在的身体状态，像朋友一样，不超过30字。"
             }],
             "max_tokens": 100
         }
     )
     
-    message = ds_response.json()["choices"][0]["message"]["content"]
+    result = ds_response.json()
+    print("DeepSeek response:", result)
     
-    # 发Bark
-    requests.get(f"{BARK_URL}/{message}")
+    if "choices" not in result:
+        return jsonify({"error": "DeepSeek error", "detail": result}), 500
+    
+    message = result["choices"][0]["message"]["content"]
+    
+    bark_url = BARK_URL.rstrip("/")
+    requests.get(f"{bark_url}/{message}")
     
     return jsonify({"message": message})
 
