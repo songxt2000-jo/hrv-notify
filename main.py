@@ -26,7 +26,7 @@ def notify():
             "model": "deepseek-chat",
             "messages": [{
                 "role": "user",
-                "content": f"我的HRV值是{hrv}ms，请用一句温柔的中文告诉我现在的身体状态，像朋友一样，不超过30字。"
+                "content": f"我的HRV值是{hrv}ms，请用一句温柔的中文告诉我现在的身体状态，像恋人一样，不超过30字。"
             }],
             "max_tokens": 100
         }
