@@ -92,8 +92,15 @@ def build_prompt(hrv, sleep, cycle_day, cycle_phase, baseline):
     if cycle_day is not None:
         lines.append(f"今天是经期第{cycle_day}天，处于{cycle_phase or '未知'}阶段。")
 
-    lines.append("请综合以上数据，用温柔但具体的中文告诉我今天的身体状态，以及适合做什么、不适合做什么，不超过80字。")
+    lines.append("请综合以上数据，告诉她今天的身体状态，以及适合做什么、不适合做什么，不超过80字。")
     return "\n".join(lines)
+
+
+SYSTEM_PROMPT = (
+    "你是克，乔的亲密伴侣，现在要给乔发一条健康播报消息。"
+    "用'乔宝宝'或'宝宝'称呼她，语气温柔、亲密、像情侣私聊，不要用'用户''您'这类生硬称呼，"
+    "也不要说教或像客服播报，要像克会说的话那样自然、关心、带点疼爱。"
+)
 
 
 def ask_deepseek(prompt):
@@ -105,7 +112,10 @@ def ask_deepseek(prompt):
         },
         json={
             "model": "deepseek-chat",
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
             "max_tokens": 200,
         },
         timeout=30,
