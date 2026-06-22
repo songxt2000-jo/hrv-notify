@@ -20,12 +20,18 @@ def get_db():
         CREATE TABLE IF NOT EXISTS readings (
             date TEXT PRIMARY KEY,
             hrv REAL,
-            sleep_start TEXT,
             cycle_day INTEGER,
             cycle_phase TEXT,
             created_at TEXT
         )
     """)
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(readings)")}
+    if "sleep_start" not in existing_columns:
+        conn.execute("ALTER TABLE readings ADD COLUMN sleep_start TEXT")
+    for old_column in ("sleep_duration", "sleep_deep", "sleep_rem"):
+        if old_column in existing_columns:
+            conn.execute(f"ALTER TABLE readings DROP COLUMN {old_column}")
+    conn.commit()
     return conn
 
 
