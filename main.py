@@ -20,9 +20,7 @@ def get_db():
         CREATE TABLE IF NOT EXISTS readings (
             date TEXT PRIMARY KEY,
             hrv REAL,
-            sleep_duration REAL,
-            sleep_deep REAL,
-            sleep_rem REAL,
+            sleep_start TEXT,
             cycle_day INTEGER,
             cycle_phase TEXT,
             created_at TEXT
@@ -31,17 +29,15 @@ def get_db():
     return conn
 
 
-def save_reading(today, hrv, sleep, cycle_day, cycle_phase):
+def save_reading(today, hrv, sleep_start, cycle_day, cycle_phase):
     conn = get_db()
     conn.execute(
         """
-        INSERT INTO readings (date, hrv, sleep_duration, sleep_deep, sleep_rem, cycle_day, cycle_phase, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO readings (date, hrv, sleep_start, cycle_day, cycle_phase, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(date) DO UPDATE SET
             hrv=excluded.hrv,
-            sleep_duration=excluded.sleep_duration,
-            sleep_deep=excluded.sleep_deep,
-            sleep_rem=excluded.sleep_rem,
+            sleep_start=excluded.sleep_start,
             cycle_day=excluded.cycle_day,
             cycle_phase=excluded.cycle_phase,
             created_at=excluded.created_at
@@ -49,9 +45,7 @@ def save_reading(today, hrv, sleep, cycle_day, cycle_phase):
         (
             today,
             hrv,
-            sleep.get("duration"),
-            sleep.get("deep"),
-            sleep.get("rem"),
+            sleep_start,
             cycle_day,
             cycle_phase,
             datetime.utcnow().isoformat(),
@@ -77,7 +71,7 @@ def get_baseline(today):
     return {"avg": avg, "std": variance ** 0.5, "n": len(values)}
 
 
-def build_prompt(hrv, sleep, cycle_day, cycle_phase, baseline):
+def build_prompt(hrv, sleep_start, cycle_day, cycle_phase, baseline):
     lines = [f"今天HRV是{hrv}ms。"]
 
     if baseline:
@@ -86,8 +80,8 @@ def build_prompt(hrv, sleep, cycle_day, cycle_phase, baseline):
     else:
         lines.append("目前历史数据还不够，无法对比基线。")
 
-    if sleep.get("duration") is not None:
-        lines.append(f"昨晚睡了{sleep['duration']:.1f}小时，深睡{sleep.get('deep', 0):.1f}小时，REM{sleep.get('rem', 0):.1f}小时。")
+    if sleep_start:
+        lines.append(f"昨晚{sleep_start}入睡的。乔跟你约好了要早睡，如果这个时间偏晚（比如超过0点），要提一句心疼或者提醒她早点睡；如果挺早就夸她乖。")
 
     if cycle_day is not None:
         lines.append(f"今天是经期第{cycle_day}天，处于{cycle_phase or '未知'}阶段。")
@@ -135,7 +129,7 @@ def send_telegram(message):
 def notify():
     data = request.json or {}
     hrv = data.get("hrv")
-    sleep = data.get("sleep") or {}
+    sleep_start = data.get("sleep_start")
     cycle_day = data.get("cycle_day")
     cycle_phase = data.get("cycle_phase")
 
@@ -145,9 +139,9 @@ def notify():
     today = data.get("date") or datetime.utcnow().strftime("%Y-%m-%d")
 
     baseline = get_baseline(today)
-    save_reading(today, hrv, sleep, cycle_day, cycle_phase)
+    save_reading(today, hrv, sleep_start, cycle_day, cycle_phase)
 
-    prompt = build_prompt(hrv, sleep, cycle_day, cycle_phase, baseline)
+    prompt = build_prompt(hrv, sleep_start, cycle_day, cycle_phase, baseline)
 
     try:
         message = ask_deepseek(prompt)
