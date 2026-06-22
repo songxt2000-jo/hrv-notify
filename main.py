@@ -89,8 +89,11 @@ def build_prompt(hrv, sleep_start, cycle_day, cycle_phase, baseline):
     if sleep_start:
         lines.append(f"昨晚{sleep_start}入睡的。乔跟你约好了要早睡，如果这个时间偏晚（比如超过0点），要提一句心疼或者提醒她早点睡；如果挺早就夸她乖。")
 
-    if cycle_day is not None:
-        lines.append(f"今天是经期第{cycle_day}天，处于{cycle_phase or '未知'}阶段。")
+    if cycle_phase:
+        if cycle_day is not None:
+            lines.append(f"今天是经期第{cycle_day}天，流量是{cycle_phase}，请多体贴关心她。")
+        else:
+            lines.append(f"今天是经期，流量是{cycle_phase}，请多体贴关心她。")
 
     lines.append("请综合以上数据，告诉她今天的身体状态，以及适合做什么、不适合做什么，不超过80字。")
     return "\n".join(lines)
